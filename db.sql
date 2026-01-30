@@ -2,23 +2,18 @@ CREATE DATABASE IF NOT EXISTS snatchit;
 USE snatchit;
 
 CREATE TABLE users (
-IF NOT EXISTS (SELECT * FROM information_schema.tables 
-               WHERE table_schema = 'snatchit' 
-               AND table_name = 'users') THEN
-    CREATE TABLE users (
   id INT PRIMARY KEY AUTO_INCREMENT,
-  wallet_address CHAR(42) NOT NULL UNIQUE,
-  nonce VARCHAR(32) NOT NULL,
-  last_wallet_provider VARCHAR(20),
-  chain_id INT,
   username VARCHAR(50),
   avatar_url VARCHAR(512),
-  status TINYINT NOT NULL DEFAULT 1 COMMENT '1:正常, 0:封禁',
+  email VARCHAR(100),
+  social_platform VARCHAR(50),
+  social_platform_user_id VARCHAR(256),
+  stat TINYINT NOT NULL DEFAULT 1 COMMENT '1:正常, 0:封禁',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  INDEX idx_wallet_address (wallet_address),
-  INDEX idx_status (status),
+  INDEX idx_social_platform (social_platform, social_platform_user_id),
+  INDEX idx_stat (stat),
   INDEX idx_created_at (created_at)
 );
 
