@@ -29,16 +29,16 @@ const menuItems = [
     href: '/dashboard/analytics',
   },
   {
-    id: 'users',
-    label: '用户管理',
+    id: 'authenticate',
+    label: '授权管理',
     icon: Users,
-    href: '/dashboard/users',
+    href: '/dashboard/authenticate',
   },
   {
-    id: 'content',
-    label: '内容管理',
+    id: 'funds',
+    label: '资金管理',
     icon: FileText,
-    href: '/dashboard/content',
+    href: '/dashboard/funds',
   },
   {
     id: 'notifications',
@@ -77,13 +77,13 @@ export default function Sidebar() {
       {/* Mobile menu button */}
       <button
         onClick={toggleMobile}
-        className="fixed top-4 left-4 z-40 p-2 rounded-lg bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 lg:hidden cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors duration-200"
+        className="fixed top-4 left-4 z-40 p-2 rounded-lg bg-white/5 border border-white/10 lg:hidden cursor-pointer hover:border-white/30 hover:bg-white/10 transition-colors duration-200"
         aria-label="Toggle menu"
       >
         {isMobileOpen ? (
-          <X className="w-6 h-6 text-primary" />
+          <X className="w-6 h-6 text-white" />
         ) : (
-          <Menu className="w-6 h-6 text-primary" />
+          <Menu className="w-6 h-6 text-white" />
         )}
       </button>
 
@@ -98,15 +98,20 @@ export default function Sidebar() {
       {/* Sidebar */}
       <aside
         className={clsx(
-          'fixed left-0 top-0 h-screen w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 z-30 transition-transform duration-300 lg:translate-x-0 overflow-y-auto',
+          'fixed left-0 top-0 h-screen w-64 bg-[#050505] border-r border-white/10 z-30 transition-transform duration-300 lg:translate-x-0 overflow-y-auto',
           isMobileOpen ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         {/* Logo/Header */}
-        <div className="sticky top-0 bg-white dark:bg-slate-900 h-20 flex items-center justify-center border-b border-gray-200 dark:border-slate-700">
-          <h1 className="text-2xl font-bold text-primary font-fira-code">
-            Admin
-          </h1>
+        <div className="sticky top-0 bg-[#050505] h-20 flex items-center justify-center border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#8B5CF6] to-[#22D3EE] flex items-center justify-center shadow-lg shadow-[#8B5CF6]/30">
+              <LayoutDashboard className="w-5 h-5 text-[#050505]" />
+            </div>
+            <h1 className="text-lg font-semibold text-white tracking-wide">
+              AgentPay
+            </h1>
+          </div>
         </div>
 
         {/* Navigation Menu */}
@@ -123,8 +128,8 @@ export default function Sidebar() {
                 className={clsx(
                   'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 cursor-pointer',
                   isActive
-                    ? 'bg-primary text-white shadow-md'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-primary/10 dark:hover:bg-primary/20',
+                    ? 'bg-gradient-to-r from-[#8B5CF6] to-[#22D3EE] text-[#050505] shadow-lg'
+                    : 'text-slate-300 hover:bg-white/5 hover:text-white',
                 )}
               >
                 <Icon className="w-5 h-5 flex-shrink-0" />
@@ -135,9 +140,9 @@ export default function Sidebar() {
         </nav>
 
         {/* Footer Info */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            v1.0.0 | Admin Dashboard
+        <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-white/10 bg-[#0B1220]">
+          <p className="text-xs text-slate-400">
+            v1.0.0 | AgentPay Console
           </p>
         </div>
       </aside>

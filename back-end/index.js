@@ -1,14 +1,27 @@
+import 'dotenv/config';
 import express, { json } from 'express';
 import fs from 'fs';
 
 import { getProductById, getProductsBySellerId, getProductsByStatus, getRandomProduct, addProduct, updateProduct, deleteProduct } from './db/db_products.js';
 import { OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
-
-const GOOGLE_CLIENT_ID="580774494470-tqipf63iihr1a06cbco0a9j5jmo3a3gv.apps.googleusercontent.com"
-const GOOGLE_CLIENT_SECRET="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"
-const JWT_SECRET="your_jwt_secret"
-const GOOGLE_AUTH_CALLBACK_URL="http://localhost:3000/google-auth-callback"
+import { sendTrx,createWallet,getBalance,getAccount,executePayment} from './wallet.js';
+import { loginOrRegister, getUserInfoBySocialPlatform, updateUserWalletAddress, approveContract } from './db/db_users.js';
+import { encryptPrivateKey, decryptPrivateKey } from './util.js';
+import {  
+createSpendingKey,
+getSpendingKeyById,
+getSpendingKeyByAccessKey,
+getSpendingKeysByUserId,
+updateSpendingKey,
+deleteSpendingKey,
+updateBudgetUsage,
+updateStatus,
+resetBudget,
+incrementRateUsage,
+canPay,
+getKeysNeedingReset} from './db/db_spending_keys.js';
+import { authenticateToken } from './middleware.js'; // 导入中间件
 
 const app = express();
 const PORT = 4000;
@@ -49,9 +62,9 @@ app.post('/api/auth/google', async (req, res) => {
 
     // 配置 Google Client
     const client = new OAuth2Client(
-        GOOGLE_CLIENT_ID,
-        GOOGLE_CLIENT_SECRET,
-        GOOGLE_AUTH_CALLBACK_URL // 必须与 Google Console 配置完全一致
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        process.env.GOOGLE_AUTH_CALLBACK_URL // 必须与 Google Console 配置完全一致
     );
     console.log(client)
     try {
@@ -61,7 +74,7 @@ app.post('/api/auth/google', async (req, res) => {
         // 2. 验证 id_token 的合法性，并解析用户信息
         const ticket = await client.verifyIdToken({
             idToken: tokens.id_token,
-            audience: GOOGLE_CLIENT_ID,
+            audience: process.env.GOOGLE_CLIENT_ID,
         });
         const payload = ticket.getPayload();
         
@@ -74,19 +87,51 @@ app.post('/api/auth/google', async (req, res) => {
 
         // 4. 签发你自己的后端 Session Token (用于后续 API 调用)
         const appToken = jwt.sign(
-            { userId: sub, email }, // 你的用户标识
-            JWT_SECRET,
+            { userId: sub, email, platform: "google" }, // 你的用户标识
+            process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
 
         console.log('Google Auth Success:', { userId: sub, email, name });
+
+
+        const socialData = {
+            social_platform: 'google',
+            social_platform_user_id: sub,
+            username: name,
+            avatar_url: picture,
+            email
+        };
+
+        let walletData = {};
+        let userInfo = {}
+        try {
+            const existingUser = await getUserInfoBySocialPlatform('google', sub);
+            
+            // if (!existingUser) {
+            //     // Create new wallet
+            //     const wallet = await createWallet();
+            //     walletData = {
+            //         wallet_address: wallet.address,
+            //         public_key: wallet.publicKey,
+            //         private_key_encrypted: encryptPrivateKey(wallet.privateKey)
+            //     };
+            // }
+            
+            const { user, isNewUser } = await loginOrRegister(socialData, walletData);
+            userInfo = user;
+        } catch (error) {
+            console.error('User registration error:', error);
+        }
+
         // 5. 返回数据给前端
         res.json({
             message: 'Login successful',
             appToken: appToken,       // 用于访问你的 Express API
-            user: { name, email, picture },
+            user: { name, email, picture, platform: "google" },
             // 【关键】将原始 id_token 返回给前端，用于 Web3 AA (Sui zkLogin / MPC)
-            googleIdToken: tokens.id_token 
+            googleIdToken: tokens.id_token,
+            walletAddress: userInfo.wallet_address || null
         });
 
     } catch (error) {
@@ -95,108 +140,161 @@ app.post('/api/auth/google', async (req, res) => {
     }
 });
 
-app.post('/addProduct', async (req, res) => {
-    const { seller_id, title, img, product_desc, price, ticket_price, number_digits, deadline } = req.body;
-    if (!seller_id) {
-        return res.status(400).json({ code: -1, msg: 'Missing required field: seller_id' });
-    }
-    if (!title) {
-        return res.status(400).json({ code: -1, msg: 'Missing required field: title' });
-    }
-    if (!img) {
-        return res.status(400).json({ code: -1, msg: 'Missing required field: img' });
-    }
-    if (!product_desc) {
-        return res.status(400).json({ code: -1, msg: 'Missing required field: product_desc' });
-    }
-    if (!price) {
-        return res.status(400).json({ code: -1, msg: 'Missing required field: price' });
-    }
-    if (!ticket_price) {
-        return res.status(400).json({ code: -1, msg: 'Missing required field: ticket_price' });
-    }
-    if (!number_digits) {
-        return res.status(400).json({ code: -1, msg: 'Missing required field: number_digits' });
-    }
-    if (!deadline) {
-        return res.status(400).json({ code: -1, msg: 'Missing required field: deadline' });
-    }
+app.post('/updateWallet', authenticateToken, async (req, res) => {
     try {
-        const base64Data = img.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64');
-        const filePath = `./file/${Date.now()}.png`;
-        const fileDir = './file';
-        
-        // 检查 file 目录是否存在，不存在则创建
-        if (!fs.existsSync(fileDir)) {
-            fs.mkdirSync(fileDir, { recursive: true });
+        const { userId } = req.user;
+        const { walletAddress } = req.body;
+
+        if (!walletAddress) {
+            return res.status(400).json({ code: -1, error: 'Wallet address is required' });
         }
 
-        await fs.promises.writeFile(filePath, buffer);
+        const user = await getUserInfoBySocialPlatform('google', userId);
+        await updateUserWalletAddress(user.id, walletAddress);
 
-        req.body.img = filePath.slice(1);
-
-        //生成一个16位的随机字符串作为uuid
-        const uuid = Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-        req.body.uuid = uuid;
-
-        const productId = await addProduct(req.body);
-        res.status(201).json({ id: productId, message: 'Product added successfully' , img: req.body.img });
+        res.status(200).json({ code: 0, message: 'Wallet address updated successfully' });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ error: error.message });
+        console.error('updateWallet error:', error);
+        res.status(500).json({ code: -1, error: error.message });
     }
 });
 
-app.post('/updateProduct', async (req, res) => {
-    const { id, seller_id, title, img, product_desc, price, ticket_price, number_digits, deadline } = req.body;
-    if (!id) {
-        return res.status(400).json({ code: -1, msg: 'Missing required field: id' });
-    }
+app.post('/approveContract', authenticateToken, async (req, res) => {
     try {
-        if (img && img.startsWith('data:image/')) {
-            const base64Data = img.replace(/^data:image\/\w+;base64,/, '');
-            const buffer = Buffer.from(base64Data, 'base64');
-            const filePath = `./file/${Date.now()}.png`;
-            const fileDir = './file';
-            
-            // 检查 file 目录是否存在，不存在则创建
-            if (!fs.existsSync(fileDir)) {
-                fs.mkdirSync(fileDir, { recursive: true });
-            }
+        const { userId } = req.user;
 
-            await fs.promises.writeFile(filePath, buffer);
+        const user = await getUserInfoBySocialPlatform('google', userId);
+        await approveContract(user.id);
 
-            req.body.img = filePath.slice(1);
+        res.status(200).json({ code: 0, message: 'approved successfully' });
+    } catch (error) {
+        console.error('approveContract error:', error);
+        res.status(500).json({ code: -1, error: error.message });
+    }
+});
+
+//添加、编辑公用接口 - 支出密钥
+app.post('/saveKeys', authenticateToken, async (req, res) => {
+    try {
+        const { userId } = req.user;
+        let access_key
+        const {
+            id,
+            name,
+            spending_limit,
+            period_seconds,
+            rate_limit,
+            status,
+            metadata,
+            currency,
+            budget_limit,
+            budget_usage,
+            budget_period,
+            approval_mode,
+            auto_approve_limit,
+            rate_limit_max,
+            rate_limit_period,
+            current_rate_usage,
+            allowed_addresses,
+            blocked_addresses,
+            allowed_skills,
+            allowed_merchant_categories,
+            alert_threshold_percent,
+            expires_at
+        } = req.body;
+        if (!id) {
+            access_key = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+        }
+
+        const user = await getUserInfoBySocialPlatform('google', userId)
+        console.log(budget_usage)
+        const payload = {
+            user_id: user.id,
+            name: name || null,
+            access_key,
+            status: (status || 'ACTIVE').toUpperCase(),
+            currency: currency || 'USDT',
+            budget_limit: budget_limit ?? spending_limit ?? 0,
+            budget_usage: budget_usage || 0,
+            budget_period: budget_period || 'TOTAL',
+            approval_mode: approval_mode || 'HYBRID',
+            auto_approve_limit: auto_approve_limit || 0,
+            rate_limit_max: rate_limit_max ?? rate_limit ?? -1,
+            rate_limit_period: rate_limit_period || 'DAILY',
+            current_rate_usage: current_rate_usage ?? 0,
+            allowed_addresses: allowed_addresses ?? null,
+            blocked_addresses: blocked_addresses ?? null,
+            allowed_skills: allowed_skills ?? null,
+            allowed_merchant_categories: allowed_merchant_categories ?? null,
+            alert_threshold_percent: alert_threshold_percent ?? 80,
+            expires_at: expires_at || null,
+            metadata: metadata || {},
+            period_seconds: period_seconds
+        };
+
+        let keyData
+        if (!id) {
+            const newKeyId = await createSpendingKey(payload);
+            keyData = await getSpendingKeyById(newKeyId);
         }else{
-            req.body.img = '/file/' + img.split('/').pop();
+            keyData = await updateSpendingKey(id, payload);
         }
-        const isOk = await updateProduct(id, req.body);
-        if (isOk) {
-            req.body.id = id;
-        }
-        res.status(201).json({ id: id, message: 'Product added successfully' , data: req.body });
+       
+
+        res.status(201).json({ code: 0, data: keyData });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({ error: error.message });
+        console.error('addKeys error:', error);
+        res.status(500).json({ code: -1, error: error.message });
+    }
+});
+app.post('/listKeys', authenticateToken, async (req, res) => {
+    try {
+        const { userId } = req.user;
+        // 可选：从请求体接收筛选/分页参数（如果后端实现支持）
+        // const { status, limit, offset } = req.body;
+        const user = await getUserInfoBySocialPlatform('google', userId)
+
+        const keys = await getSpendingKeysByUserId(user.id);
+        res.status(200).json({ code: 0, data: keys });
+    } catch (error) {
+        console.error('listKeys error:', error);
+        res.status(500).json({ code: -1, error: error.message });
     }
 });
 
 
-app.post('/getProductList', async (req, res) => {
+
+app.post('/test', async (req, res) => {
+    // sendTrx(process.env.PLATFORM_PK, "TELin7GWhGircd9NyNM3h7aewufzYbr7wb", 1).then((tx)=>{
+     try{   
+
+        const tx = await executePayment("TELin7GWhGircd9NyNM3h7aewufzYbr7wb", "TUzz9HKrE5sgzn5RmGKG35caEyqvawoKga", 1, "txid:001");
+    
+
+        res.status(200).json({ code: 0, data: tx });
+    }catch(err){
+        res.status(500).json({ code: -1, error: err.message });
+    }
+});
+
+
+app.post('/getWalletInfo', authenticateToken, async (req, res) => {
     try {
-        let { seller_id } = req.body;
-        let products;
+        const { userId } = req.user;
         
-        if (seller_id) {
-            products = await getProductsBySellerId(seller_id);
-        }
         
-        res.status(200).json({ code: 0, data: products });
+        const user = await getUserInfoBySocialPlatform('google', userId)
+        console.log(user)
+        const balance = await getBalance(user.wallet_address);
+        const account = await getAccount(user.wallet_address);
+        res.status(200).json({ code: 0, data: { balance, account, address: user.wallet_address, is_approved: user.is_approved } });
+
     } catch (error) {
         res.status(500).json({ code: -1, error: error.message });
     }
 });
+
+
 
 // 启动服务器
 app.listen(PORT, () => {

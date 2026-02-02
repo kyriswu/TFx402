@@ -1,0 +1,14 @@
+部署合约流程
+1. npm install -g tronbox （安装依赖）
+2. tronbox init （去到指定的目录初始化）
+
+TronBox 不支持把 version 指向本地文件，它只会去 ~/.tronbox/solc/soljson_v<version>.js 找缓存。
+我已把配置改回版本号并把本地编译器复制到 TronBox 的缓存位置。
+
+3. tronbox compile
+4. tronbox migrate --network nile
+查看合约地址：https://nile.tronscan.org/#/
+
+AgentPay:
+    (base58) TS9vEcWUkPZ9LtiC2D5XtM8e8ZDwgS82K2
+    (hex) 41b18897a1981c064f88bdf4cdd23ee465abb371e2

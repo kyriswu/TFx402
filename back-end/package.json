@@ -4,17 +4,28 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "mcp": "npx tsx mcp.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "@types/express": "^5.0.6",
+    "@types/ws": "^8.18.1",
     "cors": "^2.8.6",
+    "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "google-auth-library": "^10.5.0",
     "jsonwebtoken": "^9.0.3",
-    "mysql2": "^3.16.2"
+    "mysql2": "^3.16.2",
+    "tronweb": "^6.1.1",
+    "ws": "^8.19.0",
+    "zod-to-json-schema": "^3.25.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
   }
 }

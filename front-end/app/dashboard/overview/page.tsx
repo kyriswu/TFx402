@@ -1,11 +1,11 @@
 export default function OverviewPage() {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 rounded-2xl border border-white/10 bg-[#050505] text-slate-100 p-6">
       <div>
-        <h1 className="text-3xl font-bold text-text-dark dark:text-white font-fira-code">
+        <h1 className="text-3xl font-bold text-white font-fira-code">
           总览
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
+        <p className="text-slate-400 mt-2">
           查看您的业务关键指标和实时数据
         </p>
       </div>
@@ -20,11 +20,15 @@ export default function OverviewPage() {
         ].map((kpi, idx) => (
           <div
             key={idx}
-            className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-all duration-200 cursor-pointer"
+            className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 hover:border-white/20 hover:shadow-lg hover:shadow-white/5 transition-all duration-200 cursor-pointer"
           >
-            <p className="text-sm text-gray-600 dark:text-gray-400">{kpi.label}</p>
-            <p className="text-3xl font-bold text-primary mt-2">{kpi.value}</p>
-            <p className={`text-sm mt-2 ${kpi.positive ? 'text-green-600' : 'text-red-600'}`}>
+            <p className="text-sm text-slate-400">{kpi.label}</p>
+            <p className="text-3xl font-bold text-white mt-2">{kpi.value}</p>
+            <p
+              className={`text-sm mt-2 ${
+                kpi.positive ? 'text-[#10B981]' : 'text-[#EF4444]'
+              }`}
+            >
               {kpi.positive ? '↑' : '↓'} {kpi.change}
             </p>
           </div>
@@ -32,12 +36,12 @@ export default function OverviewPage() {
       </div>
 
       {/* Chart Placeholder */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-slate-700">
-        <h2 className="text-lg font-semibold text-text-dark dark:text-white mb-4">
+      <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">
           销售趋势
         </h2>
-        <div className="h-64 bg-gradient-to-br from-primary/10 to-accent/10 dark:from-primary/5 dark:to-accent/5 rounded flex items-center justify-center">
-          <p className="text-gray-500 dark:text-gray-400">图表数据加载中...</p>
+        <div className="h-64 rounded-xl border border-white/10 bg-gradient-to-br from-[#8B5CF6]/10 to-[#22D3EE]/10 flex items-center justify-center">
+          <p className="text-slate-400">图表数据加载中...</p>
         </div>
       </div>
     </div>

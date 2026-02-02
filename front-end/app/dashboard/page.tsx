@@ -1,11 +1,11 @@
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 rounded-2xl border border-white/10 bg-[#050505] p-6">
       <div>
-        <h1 className="text-3xl font-bold text-text-dark dark:text-white font-fira-code">
+        <h1 className="text-3xl font-bold text-white font-fira-code">
           欢迎回来
         </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">
+        <p className="text-slate-400 mt-2">
           选择左侧菜单开始工作
         </p>
       </div>
@@ -20,12 +20,12 @@ export default function DashboardPage() {
         ].map((stat, idx) => (
           <div
             key={idx}
-            className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-shadow duration-200"
+            className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 hover:border-white/20 hover:shadow-lg hover:shadow-white/5 transition-all duration-200"
           >
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-slate-400">
               {stat.label}
             </p>
-            <p className="text-2xl font-bold text-primary mt-2">
+            <p className="text-2xl font-bold text-white mt-2">
               {stat.value}
             </p>
           </div>
@@ -33,8 +33,8 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-slate-700">
-        <h2 className="text-lg font-semibold text-text-dark dark:text-white mb-4">
+      <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">
           最近活动
         </h2>
         <div className="space-y-3">
@@ -46,10 +46,10 @@ export default function DashboardPage() {
           ].map((activity, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors duration-200"
+              className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-[#0B1220] cursor-pointer hover:border-white/20 hover:bg-white/5 transition-colors duration-200"
             >
-              <div className="w-2 h-2 bg-primary rounded-full" />
-              <p className="text-sm text-gray-700 dark:text-gray-300">
+              <div className="w-2 h-2 bg-[#22D3EE] rounded-full" />
+              <p className="text-sm text-slate-300">
                 {activity}
               </p>
             </div>

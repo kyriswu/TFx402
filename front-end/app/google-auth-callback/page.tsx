@@ -24,11 +24,12 @@ export default function GoogleAuthCallbackPage() {
         console.log('Login response', data);
         if (data.appToken) {
           // 1. 存储业务 Token (用于常规 API)
-          localStorage.setItem('snatch_token', data.appToken);
+          localStorage.setItem('app_token', data.appToken);
+          localStorage.setItem('user_info', JSON.stringify(data.userInfo));
           
           // 2. 【核心】存储 Google id_token (用于 Web3 AA / ZK Proof)
           // 这一步是为了后续生成钱包签名
-          sessionStorage.setItem('google_id_token', data.googleIdToken);
+          // sessionStorage.setItem('google_id_token', data.googleIdToken);
 
           // 3. 跳转到仪表盘
           router.push('/dashboard');
@@ -40,5 +41,11 @@ export default function GoogleAuthCallbackPage() {
     }
   }, [searchParams, router]);
 
-  return <div>正在处理登录，请稍候...</div>;
+  return (
+    <div className="min-h-screen bg-[#050505] text-slate-100 flex items-center justify-center">
+      <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl px-6 py-4">
+        正在处理登录，请稍候...
+      </div>
+    </div>
+  );
 }
