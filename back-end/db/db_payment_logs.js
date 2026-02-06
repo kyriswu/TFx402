@@ -109,11 +109,26 @@ export async function getPaymentLogsByFromAddress(from_address, options = {}) {
     query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
     
+    // 统计查询
+    const statsQuery = `
+        SELECT 
+            COUNT(*) as total_count,
+            SUM(CASE WHEN tx_status = 'success' THEN 1 ELSE 0 END) as success_count,
+            SUM(CASE WHEN tx_status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+            SUM(CASE WHEN risk_decision = 'blocked' OR risk_decision = 'rejected' THEN 1 ELSE 0 END) as risk_blocked_count
+        FROM payment_audit_logs 
+        WHERE from_address = ?
+    `;
+    
     const [countRows] = await pool.query(countQuery, countParams);
+    const [statsRows] = await pool.query(statsQuery, [from_address]);
     const [rows] = await pool.query(query, params);
     
     return {
         total: countRows[0].total,
+        successCount: statsRows[0].success_count,
+        pendingCount: statsRows[0].pending_count,
+        riskBlockedCount: statsRows[0].risk_blocked_count,
         data: rows.map(parseJsonFields)
     };
 }
@@ -190,7 +205,7 @@ export async function updatePaymentLogStatus(invoice_id, updateData) {
     if (is_aggregated !== undefined) { updates.push('is_aggregated = ?'); values.push(is_aggregated); }
 
     if (updates.length === 0) return false;
-
+    console.log('Updating Payment Log:', updates, 'for invoice_id:', invoice_id);
     values.push(invoice_id);
     const [result] = await pool.query(
         `UPDATE payment_audit_logs SET ${updates.join(', ')} WHERE invoice_id = ?`,

@@ -21,7 +21,7 @@ import { authenticateToken } from './middleware.js'; // 导入中间件
 import { WebSocketServer } from 'ws';
 import http from 'http';
 import { v4 as uuidv4 } from 'uuid';
-import { createPaymentLog, getPaymentLogsByToAddress,getPaymentLogsByFromAddress } from './db/db_payment_logs.js';
+import { createPaymentLog, getPaymentLogsByToAddress,getPaymentLogsByFromAddress,updatePaymentLogStatus } from './db/db_payment_logs.js';
 import redis from './redisClient.js';
 import { exec } from 'child_process';
 const app = express();
@@ -383,7 +383,15 @@ app.post('/listPaymentLogs', authenticateToken, async (req, res) => {
         const offset = (page - 1) * pageSize;
         const logs = await getPaymentLogsByFromAddress(user.wallet_address, { limit: pageSize, offset });
 
-        res.status(200).json({ code: 0, data: logs.data, total: logs.total, page, pageSize });
+        res.status(200).json({ 
+            code: 0, 
+            data: logs.data, 
+            total: logs.total, 
+            page, pageSize, 
+            successCount: logs.successCount, 
+            pendingCount: logs.pendingCount, 
+            riskBlockedCount: logs.riskBlockedCount 
+        });
     } catch (error) {
         console.error('listPaymentLogs error:', error);
         res.status(500).json({ code: -1, error: error.message });
@@ -393,7 +401,6 @@ app.post('/listPaymentLogs', authenticateToken, async (req, res) => {
 // /verify endpoint: 检查签名有效性
 app.post('/verify', async (req, res) => {
   try {
-
     const riskEngine  = new RiskEngine();
     const { from, to, value, signature, message } = req.body;
 
@@ -452,6 +459,15 @@ setInterval(async () => {
   }
 
   const txid = await executeBatchPayment(payers, recipients, amounts, orderIds);
+  for (const authorization of parsed) {
+    const updateData = {
+        tx_hash : txid,
+        tx_status : 'success'
+    }
+    const cleanOrderId = authorization.orderid.replace(/^orderid/, '');
+    await updatePaymentLogStatus(cleanOrderId, updateData);
+  }
+
   //轮询交易状态    
   checkTxStatus(txid);
 

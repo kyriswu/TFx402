@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import * as TronWebPkg from "tronweb";
-// import { updatePaymentLogStatus } from './db/db_payment_logs';  
+import { updatePaymentLogStatus } from './db/db_payment_logs.js';  
 
 // 从包中提取 TronWeb 类
 // 注意：有时候可能是 TronWebPkg.TronWeb，视具体编译环境而定
@@ -147,11 +147,25 @@ while (!confirmed && attempts < maxAttempts) {
             console.log('Energy 使用:', txInfo.receipt?.energy_usage_total);
             console.log('Fee (sun):', txInfo.receipt?.net_fee);
             confirmed = true;
-            1.拿到交易的整体信息
             const events = await getEvents(txID);
-            2.拿到每个交易的详细信息
-            3.更新数据库状态
-            // await updatePaymentLogStatus();
+            for (const event of events) {
+                if (event.event_name !== 'PaymentExecuted') {
+                    continue;
+                }
+                // 解析事件数据，根据需要处理
+                const invoice_id = event.result.orderId.replace(/^orderId/, '');
+                const updateData = {
+                    tx_hash : txID,
+                    tx_status : 'success',
+                    block_height: txInfo.blockNumber,
+                    gas_fee_paid: txInfo.receipt?.net_fee + txInfo.receipt?.energy_usage_total, // 手续费(bandwidth + energy,单位TRX)
+                    settlement_time: txInfo.blockTimeStamp, // 完成时间
+                    batch_id: txID,
+                    batch_index: event.event_index,
+                }
+                await updatePaymentLogStatus(invoice_id, updateData);
+            }
+            
             return txInfo;
         } else {
             console.log(`❌ 交易失败: ${contractRet}`);

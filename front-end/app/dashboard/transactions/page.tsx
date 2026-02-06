@@ -16,6 +16,7 @@ interface Transaction {
   risk_reason?: string;
   timestamp: string;
   created_at: string;
+  tx_hash?: string;
   from_address: string;
   to_address: string;
 }
@@ -32,6 +33,9 @@ export default function TransactionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [successCount, setSuccessCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [riskBlockedCount, setRiskBlockedCount] = useState(0);
   const pageSize = 8;
 
   // Fetch transactions from API
@@ -76,11 +80,15 @@ export default function TransactionsPage() {
             risk_reason: log.risk_reason,
             timestamp: log.timestamp || new Date().toLocaleString('zh-CN'),
             created_at: log.created_at || log.timestamp || new Date().toLocaleString('zh-CN'),
+            tx_hash: log.tx_hash,
             from_address: log.from_address || '',
             to_address: log.to_address || '',
           }));
           setTransactions(transformedData);
           setTotal(result.total || 0);
+          setSuccessCount(result.successCount || 0);
+          setPendingCount(result.pendingCount || 0);
+          setRiskBlockedCount(result.riskBlockedCount || 0);
         } else {
           throw new Error(result.error || 'Failed to fetch transactions');
         }
@@ -88,6 +96,10 @@ export default function TransactionsPage() {
         console.error('Error fetching transactions:', err);
         setError(err instanceof Error ? err.message : 'Failed to load transactions');
         setTransactions([]);
+        setTotal(0);
+        setSuccessCount(0);
+        setPendingCount(0);
+        setRiskBlockedCount(0);
       } finally {
         setLoading(false);
       }
@@ -149,41 +161,21 @@ export default function TransactionsPage() {
   };
 
   const getStatusColor = (status: 'success' | 'pending' | 'failed') => {
-    switch (status) {
-      case 'success':
-        return 'bg-[#10B981]/10 text-[#10B981]';
-      case 'pending':
-        return 'bg-[#F59E0B]/10 text-[#F59E0B]';
-      case 'failed':
-        return 'bg-[#EF4444]/10 text-[#EF4444]';
-      default:
-        return 'bg-slate-500/10 text-slate-400';
-    }
+    return status === 'success'
+      ? 'bg-[#10B981]/10 text-[#10B981]'
+      : 'bg-[#EF4444]/10 text-[#EF4444]';
   };
 
   const getStatusIcon = (status: 'success' | 'pending' | 'failed') => {
-    switch (status) {
-      case 'success':
-        return (
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-          </svg>
-        );
-      case 'pending':
-        return (
-          <svg className="w-4 h-4 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
-            <circle cx="10" cy="10" r="8" />
-          </svg>
-        );
-      case 'failed':
-        return (
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        );
-      default:
-        return null;
-    }
+    return status === 'success' ? (
+      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+      </svg>
+    ) : (
+      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+      </svg>
+    );
   };
 
   return (
@@ -223,7 +215,7 @@ export default function TransactionsPage() {
             <div>
               <p className="text-sm text-slate-400">总交易数</p>
               <p className="text-2xl font-bold text-white mt-1">
-                {transactions.length}
+                {total}
               </p>
             </div>
             <div className="w-12 h-12 rounded-full bg-[#8B5CF6]/20 flex items-center justify-center">
@@ -239,7 +231,7 @@ export default function TransactionsPage() {
             <div>
               <p className="text-sm text-slate-400">成功交易</p>
               <p className="text-2xl font-bold text-[#10B981] mt-1">
-                {transactions.filter(t => t.tx_status === 'success').length}
+                {successCount}
               </p>
             </div>
             <div className="w-12 h-12 rounded-full bg-[#10B981]/20 flex items-center justify-center">
@@ -255,7 +247,7 @@ export default function TransactionsPage() {
             <div>
               <p className="text-sm text-slate-400">待处理交易</p>
               <p className="text-2xl font-bold text-[#F59E0B] mt-1">
-                {transactions.filter(t => t.tx_status === 'pending').length}
+                {pendingCount}
               </p>
             </div>
             <div className="w-12 h-12 rounded-full bg-[#F59E0B]/20 flex items-center justify-center">
@@ -271,7 +263,7 @@ export default function TransactionsPage() {
             <div>
               <p className="text-sm text-slate-400">风控拦截</p>
               <p className="text-2xl font-bold text-[#EF4444] mt-1">
-                {transactions.filter(t => t.risk_decision === 'rejected').length}
+                {riskBlockedCount}
               </p>
             </div>
             <div className="w-12 h-12 rounded-full bg-[#EF4444]/20 flex items-center justify-center">
@@ -426,26 +418,26 @@ export default function TransactionsPage() {
                   <td className="px-6 py-4">
                     <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${getStatusColor(tx.tx_status)}`}>
                       {getStatusIcon(tx.tx_status)}
-                      {tx.tx_status === 'success' ? '成功' : tx.tx_status === 'pending' ? '待处理' : '失败'}
+                      {tx.tx_status === 'success' ? '成功' : '失败'}
                     </div>
                   </td>
 
                   {/* Batch Info Column */}
                   <td className="px-6 py-4">
-                    {tx.is_aggregated ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFilteredByBatch(tx.batch_id);
-                        }}
-                        className="inline-flex items-center px-3 py-1.5 bg-[#22D3EE]/20 border border-[#22D3EE]/50 rounded-full text-xs font-medium text-[#22D3EE] hover:bg-[#22D3EE]/30 transition-colors duration-200 cursor-pointer"
-                        title="点击筛选此批次"
+                    {tx.tx_hash ? (
+                      <a
+                        href={`https://nile.tronscan.org/#/transaction/${tx.tx_hash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium text-[#22D3EE] bg-[#22D3EE]/10 border border-[#22D3EE]/40 hover:bg-[#22D3EE]/20 transition-colors duration-200"
+                        title="在Tronscan查看交易"
                       >
-                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M2 4a2 2 0 012-2h12a2 2 0 012 2v4a1 1 0 11-2 0V4H4v10h4a1 1 0 110 2H4a2 2 0 01-2-2V4z" />
+                        <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M12.586 3H7a4 4 0 00-4 4v6a4 4 0 004 4h6a4 4 0 004-4V7.414l-4.414-4.414zM9 7a1 1 0 112 0v2h2a1 1 0 110 2h-2v2a1 1 0 11-2 0v-2H7a1 1 0 110-2h2V7z" />
                         </svg>
-                        Batch: {tx.batch_id.slice(0, 8)}... #{tx.batch_index}
-                      </button>
+                        Tronscan 详情
+                      </a>
                     ) : (
                       <span className="text-slate-500">-</span>
                     )}
@@ -643,7 +635,7 @@ export default function TransactionsPage() {
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">交易状态</p>
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${getStatusColor(selectedTx.tx_status)}`}>
                   {getStatusIcon(selectedTx.tx_status)}
-                  {selectedTx.tx_status === 'success' ? '成功' : selectedTx.tx_status === 'pending' ? '待处理' : '失败'}
+                  {selectedTx.tx_status === 'success' ? '成功' : '失败'}
                 </div>
               </div>
 
