@@ -38,7 +38,11 @@
 2. 平台通过 Justlend 租赁 Energy，降低交易成本
 3. 全部 staking 通过合约锁定，安全有保证
 
-- USDT支付对比 ：传统链上支付 vs Coinbase x402 vs TFx402
+
+```markdown
+传统链上支付 vs Coinbase x402 vs TFx402
+```
+
 
 | 功能 | Tron 原生 | Coinbase x402 | TFx402 |
 |------|-----------|--------|--------|
@@ -49,3 +53,30 @@
 | 协议支持 | - | x402 | x402 |
 | 闲置资金收益 | 无 | 无 | 3%-5% 年化质押增益 |
 | 交易验证 | 单笔验证 | 单笔验证 | 链上批量模拟验证 |
+
+## 快速开始
+### 前端
+
+```bash
+# dive into root dir
+# install tron-x402 sdk
+npm install tron-x402
+cd front-end
+npm run dev
+```
+
+### 后端
+```bash
+# install mysql&redis in any way you like
+cd back-end
+npm install
+npm run dev
+```
+
+### 合约
+```bash
+# install tronbox first
+cd contract
+tronbox compile
+tronbox migrate --network nile(testnet)
+```
