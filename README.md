@@ -3,7 +3,7 @@
 <h1 align="center">TFx402</h1>
 
 <p align="center">
-<strong>Gasless</strong> • <strong>Secure</strong> • <strong>Profit</strong>
+<strong style="font-size: 18px;">Gasless</strong> • <strong style="font-size: 18px;">Secure</strong> • <strong style="font-size: 18px;">Profitable</strong>
 </p>
 
   基于 Tron 的 AI Agent 智能 facilitator，支持 x402 协议，主打低手续费转账、严格资金安全管控与可靠实时处理。
@@ -112,3 +112,31 @@ const agent = new PaymentAgent({
 
 const response = await agent.get(SERVER_URL);// 请求的接口地址
 ```
+
+## 技术架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Client Layer                             │
+│  ┌──────────────────┐         ┌──────────────────┐          │
+│  │  PaymentAgent    │         │   Wallet SDK     │          │
+│  └────────┬─────────┘         └────────┬─────────┘          │
+└───────────┼─────────────────────────────┼────────────────────┘
+            │                             │
+            └────────────────┬────────────┘
+                             │
+┌───────────────────────────┴────────────────────────────────┐
+│              x402 Facilitator (Smart Contract)              │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ Batch Maker │  │ Verification │  │ Settlement   │      │
+│  └──────┬──────┘  └──────┬───────┘  └──────┬───────┘      │
+└─────────┼─────────────────┼─────────────────┼──────────────┘
+          │                 │                 │
+┌─────────┴─────────────────┼─────────────────┴──────────────┐
+│           Tron Blockchain                                   │
+│  ┌──────────────────┐  ┌─────────────────┐               │
+│  │  TRON Network    │  │  Justlend (DeFi)│               │
+│  └──────────────────┘  └─────────────────┘               │
+└──────────────────────────────────────────────────────────────┘
+```
+
