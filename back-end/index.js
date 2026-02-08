@@ -4,7 +4,7 @@ import fs from 'fs';
 
 import { auth, OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
-import { sendTrx,createWallet,getBalance,getAccount,executePayment,transferWithAuthorization,getEvents,executeBatchPayment,checkTxStatus} from './wallet.js';
+import { sendTrx,createWallet,getBalance,getAccount,executePayment,transferWithAuthorization,getEvents,executeBatchPayment,validateBatchPayment,checkTxStatus} from './wallet.js';
 import { loginOrRegister, getUserInfoBySocialPlatform, updateUserWalletAddress, approveContract,getUserByWalletAddress } from './db/db_users.js';
 import { encryptPrivateKey, decryptPrivateKey } from './util.js';
 import {  
@@ -181,6 +181,7 @@ app.post('/updateWallet', authenticateToken, async (req, res) => {
         }
 
         const user = await getUserInfoBySocialPlatform('google', userId);
+        console.log('Updating wallet for user:', user);
         await updateUserWalletAddress(user.id, walletAddress);
 
         res.status(200).json({ code: 0, message: 'Wallet address updated successfully' });
@@ -440,7 +441,7 @@ setInterval(async () => {
   const orders = await redis.lrange("batch:payments", 0, -1);
 
   if (!orders.length) return;
-
+  
   // 清空队列
   await redis.del("batch:payments");
 
@@ -458,7 +459,40 @@ setInterval(async () => {
     orderIds.push(authorization.orderid    ); // 或你真实 orderId
   }
 
-  const txid = await executeBatchPayment(payers, recipients, amounts, orderIds);
+  const validationResult = await validateBatchPayment(payers, recipients, amounts, orderIds);
+  console.log('批量验证结果:', validationResult);
+
+    let execPayers = payers;
+    let execRecipients = recipients;
+    let execAmounts = amounts;
+    let execOrderIds = orderIds;
+
+    if (!validationResult?.success) {
+        const failedIndexes = (validationResult?.failedIndexes || []).map((idx) => Number(idx));
+        const failedSet = new Set(failedIndexes);
+
+        execPayers = [];
+        execRecipients = [];
+        execAmounts = [];
+        execOrderIds = [];
+
+        for (let i = 0; i < payers.length; i++) {
+            if (failedSet.has(i)) {
+                continue;
+            }
+            execPayers.push(payers[i]);
+            execRecipients.push(recipients[i]);
+            execAmounts.push(amounts[i]);
+            execOrderIds.push(orderIds[i]);
+        }
+    }
+
+    if (execPayers.length === 0) {
+        console.log('批量验证失败：无可执行的订单');
+        return;
+    }
+
+    const txid = await executeBatchPayment(execPayers, execRecipients, execAmounts, execOrderIds);
   for (const authorization of parsed) {
     const updateData = {
         tx_hash : txid,
@@ -470,6 +504,7 @@ setInterval(async () => {
 
   //轮询交易状态    
   checkTxStatus(txid);
+  
 
 }, 1000);
 

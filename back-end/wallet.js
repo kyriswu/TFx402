@@ -88,15 +88,25 @@ export async function executePayment(buyer, seller, amount, orderId) {
 
 export async function executeBatchPayment(buyer, seller, amount, orderId) {
 
-    const agentPayAddress = "TFdSFLMVN7qqDZgnuzQh2DocQjYPaX8ex9"; //agentPayBatch 合约地址
+    const agentPayAddress = "TBSLUNwouDJDLt9ei3C65WSYFdb5T4KF6G"; //agentPayBatch 合约地址
     const agentPayContract = await tronWeb.contract().at(agentPayAddress);
-
-    const tx = await agentPayContract.executeBatchPayments(buyer, seller, amount, orderId).send({
+        const tx = await agentPayContract.executeBatchPayments(buyer, seller, amount, orderId).send({
         feeLimit: 100_000_000
     });
     console.log("批量交易已广播，batchId:", tx);
     return tx;
 }
+
+export async function validateBatchPayment(buyer, seller, amount, orderId) {
+
+    const agentPayAddress = "TBSLUNwouDJDLt9ei3C65WSYFdb5T4KF6G"; // AgentPayBatch 合约地址
+    const agentPayContract = await tronWeb.contract().at(agentPayAddress);
+
+    const result = await agentPayContract.simulateBatchValidation(buyer, seller, amount, orderId).call();
+    return result;
+}
+
+
 
 
 export async function transferWithAuthorization(contractAddress, payload) {

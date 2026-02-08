@@ -18,5 +18,6 @@ AgentPayUnified:
     (hex) 41b6d676da4bb94293c13f518f3f4533909b85621a
 
     AgentPayBatch:
-    (base58) TFdSFLMVN7qqDZgnuzQh2DocQjYPaX8ex9
-    (hex) 413e137e26beb9549b5a3dcac2c6123cc0acb9f45c
+    (base58) TBSLUNwouDJDLt9ei3C65WSYFdb5T4KF6G
+
+    AgentPayBatchSimulator（新地址）: TWMQHhMkkKGAadeMk7GfS9LbHYjrez9oFd

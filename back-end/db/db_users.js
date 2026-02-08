@@ -153,7 +153,9 @@ export async function loginOrRegister(socialData, walletData) {
 }
 
 // 根据社交平台和用户ID查询用户信息
-export async function getUserInfoBySocialPlatform(social_platform, social_platform_user_id) {
+export async function getUserInfoBySocialPlatform(social_platform, social_platform_user_id)
+ {
+    console.log('查询用户信息，社交平台:', social_platform, '用户ID:', social_platform_user_id);
     const [rows] = await pool.query(
         'SELECT * FROM users WHERE social_platform = ? AND social_platform_user_id = ? AND stat = 1',
         [social_platform, social_platform_user_id]

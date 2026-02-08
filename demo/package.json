@@ -11,8 +11,17 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@xmtp/agent-sdk": "^1.1.15",
+    "@xmtp/xmtp-js": "^13.0.4",
     "axios": "^1.13.4",
+    "dotenv": "^17.2.4",
     "express": "^5.2.1",
+    "tron-x402": "file:../tron-x402",
     "tronweb": "^6.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }

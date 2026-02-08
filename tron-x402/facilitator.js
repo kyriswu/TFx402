@@ -177,6 +177,31 @@ class FacilitatorClient {
     }
 
     /**
+     * 创建支付请求（由 Facilitator 生成支付载荷）
+     * @param {Object} payload - 支付请求数据
+     * @param {string|number} payload.amount - 支付金额
+     * @param {string} payload.recipient - 收款方地址
+     * @param {string} payload.reference - 业务参考ID
+     * @param {string} payload.currency - 资产符号（如 USDC）
+     * @param {string} [payload.network] - 网络标识（如 base）
+     * @returns {Promise<Object>} 支付载荷
+     */
+    async createPayment(payload) {
+        try {
+            const response = await this.axiosInstance.post('/create-payment', payload);
+            return {
+                success: true,
+                data: response.data
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.response?.data?.error || error.message
+            };
+        }
+    }
+
+    /**
      * 创建支付日志
      * @param {Object} payload - 支付日志数据
      * @param {string} payload.requestId - 请求ID
@@ -242,6 +267,49 @@ class FacilitatorClient {
 }
 
 /**
+ * PaymentFacilitator 封装（面向 Agent 侧）
+ */
+class PaymentFacilitator {
+    /**
+     * @param {Object} options - 初始化参数
+     * @param {string} options.privateKey - Agent 钱包私钥（仅本地使用）
+     * @param {string} [options.network] - 网络标识（如 base）
+     * @param {string} [options.baseUrl] - Facilitator 服务地址
+     * @param {number} [options.timeout] - 请求超时时间（ms）
+     */
+    constructor(options = {}) {
+        const { privateKey, network = 'mainnet', baseUrl, timeout } = options;
+        if (!privateKey) throw new Error('privateKey is required');
+
+        this.privateKey = privateKey;
+        this.network = network;
+        this.client = new FacilitatorClient({ baseUrl, timeout });
+    }
+
+    /**
+     * 创建支付并返回 payload
+     * @param {Object} payload - 支付请求数据
+     * @param {string|number} payload.amount - 支付金额
+     * @param {string} payload.recipient - 收款方地址
+     * @param {string} payload.reference - 业务参考ID
+     * @param {string} payload.currency - 资产符号（如 USDC）
+     * @returns {Promise<Object>} 支付载荷
+     */
+    async createPayment(payload) {
+        const response = await this.client.createPayment({
+            ...payload,
+            network: payload.network || this.network
+        });
+
+        if (!response.success) {
+            throw new Error(response.error || 'Failed to create payment');
+        }
+
+        return response.data;
+    }
+}
+
+/**
  * 创建 Facilitator 客户端实例
  * @param {Object} options - 可选配置
  * @param {string} options.baseUrl - Facilitator 服务地址（可选，默认 http://localhost:4000）
@@ -252,5 +320,9 @@ export function createFacilitatorClient(options = {}) {
     return new FacilitatorClient(options);
 }
 
-export { FacilitatorClient };
+export function createPaymentFacilitator(options = {}) {
+    return new PaymentFacilitator(options);
+}
+
+export { FacilitatorClient, PaymentFacilitator };
 export default FacilitatorClient;

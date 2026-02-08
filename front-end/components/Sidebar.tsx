@@ -110,7 +110,7 @@ export default function Sidebar() {
               <LayoutDashboard className="w-5 h-5 text-[#050505]" />
             </div>
             <h1 className="text-lg font-semibold text-white tracking-wide">
-              AgentPay
+              TFx402
             </h1>
           </div>
         </div>
