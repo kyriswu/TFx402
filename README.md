@@ -116,3 +116,6 @@ const response = await agent.get(SERVER_URL);// 请求的接口地址
 ## 技术架构
 ![System Architecture](./system.png)
 
+![x402](./x402.png)
+
+![highfrequency](./highfrequency.png)
