@@ -6,6 +6,7 @@
 <strong style="font-size: 18px;">Gasless</strong> • <strong style="font-size: 18px;">Secure</strong> • <strong style="font-size: 18px;">Profitable</strong>
 </p>
 
+<p>
   基于 Tron 的 AI Agent 智能 facilitator，支持 x402 协议，主打低手续费转账、严格资金安全管控与可靠实时处理。
 </p>
 
@@ -113,7 +114,7 @@ const agent = new PaymentAgent({
 const response = await agent.get(SERVER_URL);// 请求的接口地址
 ```
 
-## 技术架构
+## 系统架构
 ![System Architecture](./system.png)
 
 ![x402](./x402.png)
