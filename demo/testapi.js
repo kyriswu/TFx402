@@ -19,11 +19,10 @@ console.log("Initializing AI Payment Agent...");
 
 const agent = new PaymentAgent({
     privateKey: BUYER_PRIVATE_KEY,
-    // [变更] 不再需要 paymentContract
-    // [变更] 必须传入策略名
     policyName: 'AutoGPT-shopping', // 比如：基础用户策略、VIP策略、测试策略
     maxBudget: 5000000,
-    network: 'nile' // 或 'nile' 测试网
+    network: 'nile', // 或 'nile' 测试网
+    facilitatorUrl: 'xxxxxx', // Facilitator 服务地址
 });
 
 console.log(`Agent Address: ${agent.myAddress}`);
@@ -33,9 +32,6 @@ console.log(`Agent Address: ${agent.myAddress}`);
 // ==========================================
 async function runTest() {
     try {
-        console.log(`\n[Test] Sending GET request to: ${SERVER_URL}`);
-        console.log(`[Test] Expecting 402 -> Auto Sign -> Retry sequence...`);
-        console.log('---------------------------------------------------');
 
         // SDK 会自动处理: 
         // 1. 收到 402 
@@ -47,14 +43,11 @@ async function runTest() {
 
         console.log('---------------------------------------------------');
         console.log('✅ [Test Success] Data Received!');
-        console.log('Response Status:', response.status);
-        console.log('Response Body:', response.data);
         
         // 打印服务端返回的凭据信息
         if (response.data.receipt) {
             console.log('\nReceipt Details:');
             console.log(`- From: ${response.data.receipt.from}`);
-            console.log(`- TxID: ${response.data.receipt.txId}`);
             console.log(`- Invoice: ${response.data.receipt.invoiceId}`);
         }
 
