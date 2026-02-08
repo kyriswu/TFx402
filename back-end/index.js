@@ -4,7 +4,7 @@ import fs from 'fs';
 
 import { auth, OAuth2Client } from 'google-auth-library';
 import jwt from 'jsonwebtoken';
-import { sendTrx,createWallet,getBalance,getAccount,executePayment,transferWithAuthorization,getEvents,executeBatchPayment,validateBatchPayment,checkTxStatus} from './wallet.js';
+import { sendTrx,createWallet,getBalance,getAccount,executePayment,transferWithAuthorization,getEvents,executeBatchPayment,validateBatchPayment,checkTxStatus,stakeTrxForEnergy,stakeTrx,getUserAssetValue,getExchangeRate,injectReward,getStakePrincipal} from './wallet.js';
 import { loginOrRegister, getUserInfoBySocialPlatform, updateUserWalletAddress, approveContract,getUserByWalletAddress } from './db/db_users.js';
 import { encryptPrivateKey, decryptPrivateKey } from './util.js';
 import {  
@@ -75,10 +75,32 @@ wss.on('connection', (ws, req) => {
 });
 // 路由
 app.get('/', async (req, res) => {
-    console.log(await getEvents('b9e81299bdabef41f5655effa3bade2697f1530b5142d9446becfdbdf4a8c56e'));
+    // console.log(await stakeTrxForEnergy('TKvo8fmFeMhpDmhLqqebdeoCCYGg2ECduG'))
+    // console.log(await stakeTrx(11))
+    // console.log(await getUserAssetValue('TELin7GWhGircd9NyNM3h7aewufzYbr7wb'))
+    //     console.log(await getExchangeRate())
+    await injectReward(10)
+    console.log(await getStakePrincipal('TELin7GWhGircd9NyNM3h7aewufzYbr7wb'))
   res.send('Hello, Express!');
 });
 
+app.post('/getStakeInfo', async (req, res) => {
+    const {address} = req.body;
+    if (!address) {
+        return res.status(400).json({ code: -1, error: 'Address query parameter is required' });
+    }
+    try {
+        const {exchangeRate, yieldPercent} = await getExchangeRate();
+        const vault =  await getStakePrincipal(address);
+        const safeVault = typeof vault === 'bigint' ? vault.toString() : vault;
+        const safeExchangeRate = typeof exchangeRate === 'bigint' ? exchangeRate.toString() : exchangeRate;
+        const safeYieldPercent = typeof yieldPercent === 'bigint' ? yieldPercent.toString() : yieldPercent;
+        res.json({ code: 0, vault: safeVault, exchangeRate: safeExchangeRate, yieldPercent: safeYieldPercent });
+    } catch (error) {       
+        console.error('Error fetching stake info:', error);      
+        res.status(500).json({ code: -1, error: 'Failed to fetch stake info' });
+}
+});
 /**
  * 核心接口：接收前端传来的 Code，换取 Token
  */
@@ -201,6 +223,22 @@ app.post('/approveContract', authenticateToken, async (req, res) => {
         res.status(200).json({ code: 0, message: 'approved successfully' });
     } catch (error) {
         console.error('approveContract error:', error);
+        res.status(500).json({ code: -1, error: error.message });
+    }
+});
+
+app.post('/executeBatchPayment', async (req, res) => {
+    try {
+        const { buyer, seller, amount, orderId } = req.body;
+
+        if (!buyer || !seller || amount === undefined || amount === null || !orderId) {
+            return res.status(400).json({ code: -1, error: 'Missing required fields: buyer, seller, amount, orderId' });
+        }
+
+        const txId = await executeBatchPayment([buyer], [seller], [amount], [orderId]);
+        res.status(200).json({ code: 0, txId });
+    } catch (error) {
+        console.error('executeBatchPayment error:', error);
         res.status(500).json({ code: -1, error: error.message });
     }
 });

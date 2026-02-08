@@ -20,4 +20,10 @@ AgentPayUnified:
     AgentPayBatch:
     (base58) TBSLUNwouDJDLt9ei3C65WSYFdb5T4KF6G
 
-    AgentPayBatchSimulator（新地址）: TWMQHhMkkKGAadeMk7GfS9LbHYjrez9oFd
+    代质押的合约 
+    AgentPayBatch：THoB1YYV1onn1cmHv7inoeSAMg1vaaez6k
+
+    最新AgentPayStaking: 
+TRKtn1GBHG8VUUtxZ6VFRhsYfboZ1nV3sW
+
+TRKtn1GBHG8VUUtxZ6VFRhsYfboZ1nV3sW

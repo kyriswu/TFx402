@@ -2,6 +2,8 @@ import 'dotenv/config';
 import * as TronWebPkg from "tronweb";
 import { updatePaymentLogStatus } from './db/db_payment_logs.js';  
 
+const contractADDRESS = "TRKtn1GBHG8VUUtxZ6VFRhsYfboZ1nV3sW"
+
 // 从包中提取 TronWeb 类
 // 注意：有时候可能是 TronWebPkg.TronWeb，视具体编译环境而定
 const TronWeb = TronWebPkg.TronWeb;
@@ -88,7 +90,7 @@ export async function executePayment(buyer, seller, amount, orderId) {
 
 export async function executeBatchPayment(buyer, seller, amount, orderId) {
 
-    const agentPayAddress = "TBSLUNwouDJDLt9ei3C65WSYFdb5T4KF6G"; //agentPayBatch 合约地址
+    const agentPayAddress = contractADDRESS; //agentPayBatch 合约地址
     const agentPayContract = await tronWeb.contract().at(agentPayAddress);
         const tx = await agentPayContract.executeBatchPayments(buyer, seller, amount, orderId).send({
         feeLimit: 100_000_000
@@ -99,7 +101,7 @@ export async function executeBatchPayment(buyer, seller, amount, orderId) {
 
 export async function validateBatchPayment(buyer, seller, amount, orderId) {
 
-    const agentPayAddress = "TBSLUNwouDJDLt9ei3C65WSYFdb5T4KF6G"; // AgentPayBatch 合约地址
+    const agentPayAddress = contractADDRESS; // AgentPayBatch 合约地址
     const agentPayContract = await tronWeb.contract().at(agentPayAddress);
 
     const result = await agentPayContract.simulateBatchValidation(buyer, seller, amount, orderId).call();
@@ -279,5 +281,205 @@ export async function getEvents(transactionId) {
 //   }, 5000);  // 每 5 秒查一次（TRON 出块 ~3 秒，可调到 3000-10000 ms）
 // }
 
+    export async function stakeTrxForEnergy(myAddress) {
+        // --- 场景 1: 质押 TRX 获取能量 (Freeze) ---
+        // 在 Stake 2.0 中，这叫 "FreezeBalanceV2"
+        // 注意: 质押后 TRX 会被锁定 14 天 (测试网可能不同，但机制一样)
+        try {
+            console.log("1. 正在质押 1000 TRX 以获取能量...");
+
+            // freezeBalanceV2(amount, resource, options)
+            // resource: 'ENERGY' 或 'BANDWIDTH'
+            const freezeTx = await tronWeb.transactionBuilder.freezeBalanceV2(
+                tronWeb.toSun(1000), // 质押 1000 TRX
+                "ENERGY",            // 获取资源类型：能量
+                myAddress            // 接收资源的所有者 (通常是自己)
+            );
+
+            // 签名并广播
+            const signedFreeze = await tronWeb.trx.sign(freezeTx);
+            const receiptFreeze = await tronWeb.trx.sendRawTransaction(signedFreeze);
+            console.log("质押交易 Hash:", receiptFreeze.txid);
+
+            // 等待几秒让链上确认...
+            await new Promise(r => setTimeout(r, 5000));
+
+            return receiptFreeze;
+        } catch (e) {
+            console.error("质押失败 (可能已经质押过了或余额不足):", e);
+            throw e;
+        }
+    }
+export async function stakeTrx(amountInTrx) {
+    try {
+
+        const contractAddress = contractADDRESS;
+    const contract = await tronWeb.contract().at(contractAddress);
+
+        // 将 TRX 转换为 Sun (1 TRX = 1,000,000 Sun)
+        const amountInSun = tronWeb.toSun(amountInTrx);
+
+        console.log(`正在质押 ${amountInTrx} TRX...`);
+        
+        // 调用合约 stake 方法，附带 value
+        const txId = await contract.stake().send({
+            callValue: amountInSun,
+            feeLimit: 100_000_000 // 建议设置高一点的 feeLimit 防止能量不足
+        });
+        // 在 stakeTrx 函数里加这一行日志
+console.log("当前正在执行质押的钱包地址是:", tronWeb.defaultAddress.base58);
+
+        console.log("质押成功，交易哈希:", txId);
+
+        
+    } catch (error) {
+        console.error("质押失败:", error);
+    }
+}
+
+export async function getUserAssetValue(userAddress) { // 如果你是从外部传入地址
+// export async function getUserAssetValue() {
+    try {
+        const contractAddress = contractADDRESS; 
+        
+        // 获取当前默认地址 (如果你是在后端 Node.js 环境，需要确保设置了 defaultAddress 或者传入 userAddress)
+        // 假设你已经在外部设置了 tronWeb.setAddress(...) 或者在初始化时配了 privateKey
+        // const userAddress = tronWeb.defaultAddress.base58; 
+
+        // 1. 【核心修改】补充 getAssetValue 的 ABI 定义
+        const abi = [
+            {
+                "inputs": [{"internalType": "address","name": "user","type": "address"}], // 输入参数：用户地址
+                "name": "getAssetValue",
+                "outputs": [{"internalType": "uint256","name": "","type": "uint256"}],   // 输出参数：资产数值
+                "stateMutability": "view", // 重点：这是 view 函数，不消耗能量
+                "type": "function"
+            }
+        ];
+
+        console.log(`正在查询地址 ${userAddress} 的资产...`);
+
+        // 2. 初始化合约
+        const contract = tronWeb.contract(abi, contractAddress);
+
+        // 3. 调用方法
+        // 注意：因为是查询(view)，所以用 .call() 而不是 .send()
+        const valueInSun = await contract.getAssetValue(userAddress).call();
+        
+        // 4. 处理返回结果 (TronWeb 返回的是 BigNumber对象)
+        // 将 SUN 转回 TRX 显示
+        const valueInTrx = tronWeb.fromSun(valueInSun.toString());
+        
+        console.log(`查询成功! 当前资产价值: ${valueInTrx} TRX`);
+        return valueInTrx;
+
+    } catch (error) {
+        console.error("查询资产失败:", error);
+        throw error;
+    }
+}
+
+export async function getStakePrincipal(userAddress) {
+    try {
+        const contractAddress = contractADDRESS;
+
+        const abi = [
+            {
+                "inputs": [{"internalType": "address", "name": "user", "type": "address"}],
+                "name": "getStakePrincipal",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        const contract = tronWeb.contract(abi, contractAddress);
+        const valueInSun = await contract.getStakePrincipal(userAddress).call();
+        const valueInTrx = tronWeb.fromSun(valueInSun.toString());
+        return valueInTrx;
+    } catch (error) {
+        console.error("查询质押本金失败:", error);
+        throw error;
+    }
+}
+
+// 也可以查询当前汇率 (TotalAssets / TotalShares) 仅供参考
+export async function getExchangeRate() {
+    const contractAddress = contractADDRESS;
+    const contract = await tronWeb.contract().at(contractAddress);
+    const totalAssets = await contract.totalAssets().call();
+    const totalShares = await contract.totalShares().call();
+    console.log(`当前总资产: ${tronWeb.fromSun(totalAssets.toString())} TRX, 总股份: ${totalShares.toString()}`);
+    const assets = BigInt(totalAssets.toString());
+    const shares = BigInt(totalShares.toString());
+    if (shares === 0n) return { rate: 1, yieldPercent: 0 };
+    const bps = (assets - shares) * 10000n / shares;
+    const yieldPercent = Number(bps) / 100;
+    const rate = 1 + (yieldPercent / 100);
+    return { rate, yieldPercent };
+}
+
+export async function unstakeTrx(amountTrxWanted) {
+    try {
+
+        const contractAddress = contractADDRESS;
+        const contract = await tronWeb.contract().at(contractAddress);
+        
+        const amountSunWanted = tronWeb.toSun(amountTrxWanted);
+        
+        // 1. 获取当前状态
+        const totalAssets = await contract.totalAssets().call();
+        const totalShares = await contract.totalShares().call();
+        
+        // 2. 反向计算需要的 Share 数量
+        // Formula: SharesNeeded = (AmountWanted * TotalShares) / TotalAssets
+        // 为了防止精度丢失导致取出的稍微少一点点，建议稍微向上取整或由用户直接输入 shares
+        let sharesToBurn =  tronWeb.BigNumber(amountSunWanted)
+                            .times(totalShares)
+                            .div(totalAssets)
+                            .integerValue(tronWeb.BigNumber.ROUND_CEIL); // 向上取整
+
+        console.log(`申请提取 ${amountTrxWanted} TRX, 预计销毁股份: ${sharesToBurn.toString()}`);
+
+        // 3. 调用 unstake
+        const txId = await contract.unstake(sharesToBurn.toString()).send({
+            feeLimit: 100_000_000
+        });
+
+        console.log("提现申请提交:", txId);
+        alert("提现成功！");
+
+    } catch (error) {
+        console.error("提现失败:", error);
+        // 如果错误包含 "Insufficient liquidity"，提示用户等待管理员释放资金
+        if (error.toString().includes("Insufficient liquidity")) {
+            alert("资金池流动性不足，请等待管理员解质押后重试。");
+        }
+    }
+}
+
+export async function injectReward(rewardAmount) {
+    // 假设你今天通过投票赚了 50 TRX，或者省下了 50 TRX 手续费
+    // 你决定把这 50 TRX 分给所有用户
+    // const rewardAmount = 50; 
+
+    console.log(`准备注入分红: ${rewardAmount} TRX`);
+
+    try {
+        const contract = await tronWeb.contract().at(contractADDRESS);
+        
+        // 调用 injectReward
+        const txId = await contract.injectReward().send({
+            callValue: tronWeb.toSun(rewardAmount), // 发送 TRX
+            feeLimit: 100_000_000
+        });
+
+        console.log(`✅ 分红注入成功! 交易哈希: ${txId}`);
+        console.log(`🚀 所有用户的资产价值已上涨！`);
+
+    } catch (e) {
+        console.error("注入失败:", e);
+    }
 
 
+}

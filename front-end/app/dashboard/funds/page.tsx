@@ -11,9 +11,43 @@ export default function FundsPage() {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isApproved, setIsApproved] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  const [stakeAmount, setStakeAmount] = useState<string>('');
+  const [stakeVault, setStakeVault] = useState<string>('--');
+  const [stakeExchangeRate, setStakeExchangeRate] = useState<string>('--');
+  const [stakeYieldPercent, setStakeYieldPercent] = useState<string>('--');
 
   const usdtContractAddress = 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf';// 测试链 USDT TRC20 合约地址
-  const agentPayContractAddress = 'TBSLUNwouDJDLt9ei3C65WSYFdb5T4KF6G'; // 测试链 AgentPayBatch 合约地址
+  const agentPayContractAddress = 'TRKtn1GBHG8VUUtxZ6VFRhsYfboZ1nV3sW'; // 测试链 AgentPayBatch 合约地址
+  const stakeContractAddress = 'TRKtn1GBHG8VUUtxZ6VFRhsYfboZ1nV3sW'; // 测试链质押合约地址
+  const stakeAbi = [
+    {
+      inputs: [],
+      name: 'stake',
+      stateMutability: 'payable',
+      type: 'function',
+    },
+    {
+      inputs: [],
+      name: 'totalAssets',
+      outputs: [{ type: 'uint256' }],
+      stateMutability: 'view',
+      type: 'function',
+    },
+    {
+      inputs: [],
+      name: 'totalShares',
+      outputs: [{ type: 'uint256' }],
+      stateMutability: 'view',
+      type: 'function',
+    },
+    {
+      inputs: [{ name: 'shares', type: 'uint256' }],
+      name: 'unstake',
+      outputs: [],
+      stateMutability: 'nonpayable',
+      type: 'function',
+    },
+  ];
 
   // 钱包数据
   let wallet = {
@@ -57,6 +91,7 @@ export default function FundsPage() {
         setIsConnected(true); // 如果有钱包地址，设置为已连接
 
         data.data.is_approved ? setIsApproved(true) : setIsApproved(false);
+        await fetchStakeInfo(data.data.address);
         console.log(data.data.account);
       }
     } catch (error) {
@@ -94,6 +129,7 @@ export default function FundsPage() {
       setAddress(address);
       setIsConnected(true);
       await updateUserWallet(address);
+      await fetchStakeInfo(address);
       // await approveAgent();
       
       toast.success('钱包连接成功');
@@ -183,6 +219,166 @@ export default function FundsPage() {
       setLoading(false);
     }
   };
+
+  const fetchStakeInfo = async (walletAddress: string) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/getStakeInfo`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('app_token')}`
+        },
+        body: JSON.stringify({ address: walletAddress })
+      });
+
+      const data = await response.json();
+      if (data.code === 0) {
+        const vaultValue = typeof data.vault === 'number'
+          ? data.vault.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 })
+          : data.vault;
+        const exchangeRateValue = typeof data.exchangeRate === 'number'
+          ? data.exchangeRate.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 })
+          : data.exchangeRate;
+        const yieldPercentValue = typeof data.yieldPercent === 'number'
+          ? data.yieldPercent.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 })
+          : data.yieldPercent;
+
+        setStakeVault(vaultValue || '--');
+        setStakeExchangeRate(exchangeRateValue || '--');
+        setStakeYieldPercent(yieldPercentValue || '--');
+      } else {
+        console.error('Failed to fetch stake info:', data.error || data.message);
+      }
+    } catch (error) {
+      console.error('Failed to fetch stake info:', error);
+    }
+  };
+
+  const handleStake = async () => {
+    try {
+      // @ts-ignore
+      const tron = (globalThis as any).tronWeb;
+      if (!tron || !tron.ready) {
+        toast.error('请先连接并解锁 TronLink 钱包');
+        return;
+      }
+
+      const amountValue = Number(stakeAmount);
+      if (!stakeAmount || Number.isNaN(amountValue) || amountValue <= 0) {
+        toast.error('请输入正确的质押金额');
+        return;
+      }
+
+      toast.loading('正在发起质押，请在 TronLink 中确认...');
+      const contract = tron.contract(stakeAbi, stakeContractAddress);
+      const amountInSun = tron.toSun(amountValue);
+
+      const txId = await contract.stake().send({
+        callValue: amountInSun,
+        feeLimit: 100000000,
+      });
+
+     
+
+      // const platformAddress = 'TKvo8fmFeMhpDmhLqqebdeoCCYGg2ECduG';
+      // const platformTx = await tron.trx.sendTransaction(platformAddress, amountInSun);
+      // if (!platformTx || platformTx.result !== true) {
+      //   throw new Error('平台转账失败');
+      // }
+      // console.log('平台转账 txId:', platformTx.txid || platformTx.txID);
+      // const orderId = `stake-fee-${Date.now()}`;
+      // const paymentResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/executeBatchPayment`, {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     'Authorization': `Bearer ${localStorage.getItem('app_token')}`
+      //   },
+      //   body: JSON.stringify({
+      //     buyer: tron.defaultAddress.base58,
+      //     seller: platformAddress,
+      //     amount: amountInSun,
+      //     orderId
+      //   })
+      // });
+
+      // const paymentData = await paymentResponse.json();
+      // if (!paymentResponse.ok || paymentData.code !== 0) {
+      //   throw new Error(paymentData.error || '执行批量支付失败');
+      // }
+      // console.log('已支付平台固定费用', paymentData.txId);
+
+      toast.dismiss();
+      toast.success('质押成功');
+      console.log('Stake txId:', txId);
+    } catch (error: any) {
+      console.error('质押失败:', error);
+      toast.dismiss();
+      toast.error(`质押失败: ${error?.message || error}`);
+    }
+  };
+
+  const handleUnstake = async () => {
+    try {
+      // @ts-ignore
+      const tron = (globalThis as any).tronWeb;
+      if (!tron || !tron.ready) {
+        toast.error('请先连接并解锁 TronLink 钱包');
+        return;
+      }
+
+      const amountValue = Number(stakeAmount);
+      if (!stakeAmount || Number.isNaN(amountValue) || amountValue <= 0) {
+        toast.error('请输入正确的提现金额');
+        return;
+      }
+
+      toast.loading('正在申请提现，请在 TronLink 中确认...');
+      const contract = tron.contract(stakeAbi, stakeContractAddress);
+      const amountInSun = tron.toSun(amountValue);
+
+      const totalAssets = await contract.totalAssets().call();
+      const totalShares = await contract.totalShares().call();
+
+      const sharesToBurn = tron.BigNumber(amountInSun)
+        .times(totalShares)
+        .div(totalAssets)
+        .integerValue(tron.BigNumber.ROUND_CEIL);
+
+      const txId = await contract.unstake(sharesToBurn.toString()).send({
+        feeLimit: 100000000,
+      });
+      console.log('Unstake transaction sent, txId:', txId);
+
+      toast.dismiss();
+      toast.success('提现申请已提交');
+      console.log('Unstake txId:', txId);
+    } catch (error: any) {
+      console.error('提现失败:', error);
+      toast.dismiss();
+      if (String(error).includes('Insufficient liquidity')) {
+        toast.error('资金池流动性不足，请等待管理员解质押后重试');
+        return;
+      }
+      toast.error(`提现失败: ${error?.message || error}`);
+    }
+  };
+
+  const parseNumericValue = (value: string) => {
+    const normalized = value.replace(/,/g, '').trim();
+    const parsed = Number(normalized);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+
+  const vaultValueNumber = parseNumericValue(stakeVault);
+  const yieldPercentNumber = parseNumericValue(stakeYieldPercent);
+  const expectedYieldValue =
+    vaultValueNumber !== null && yieldPercentNumber !== null
+      ? (vaultValueNumber * yieldPercentNumber) / 100
+      : null;
+  const expectedYieldDisplay =
+    expectedYieldValue !== null
+      ? expectedYieldValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 6 })
+      : '--';
 
   return (
     <>
@@ -332,23 +528,53 @@ export default function FundsPage() {
             <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <h4 className="font-semibold text-white text-lg mb-1">USDT 统计</h4>
-                  <p className="text-xs text-slate-400">已支付 / 已收到</p>
+                  <h4 className="font-semibold text-white text-lg mb-1">资产质押</h4>
+                  <p className="text-xs text-slate-400">赚取收益</p>
                 </div>
-                <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-slate-300">
-                  近 30 天
+                <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-[#10B981]/20 text-[#10B981]">
+                  收益率 {stakeYieldPercent}%
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 gap-3">
+              <div className="grid grid-cols-1 gap-3 mb-4">
                 <div className="p-4 rounded-xl border border-white/10 bg-[#0B1220]">
-                  <p className="text-xs text-slate-400 mb-1">已支付 USDT</p>
-                  <p className="text-2xl font-bold text-white">--</p>
+                  <p className="text-xs text-slate-400 mb-1">已质押金额</p>
+                  <p className="text-2xl font-bold text-white">{stakeVault} <span className="text-sm text-slate-400">TRX</span></p>
                 </div>
                 <div className="p-4 rounded-xl border border-white/10 bg-[#0B1220]">
-                  <p className="text-xs text-slate-400 mb-1">已收到 USDT</p>
-                  <p className="text-2xl font-bold text-white">--</p>
+                  <p className="text-xs text-slate-400 mb-1">预期收益</p>
+                  <p className="text-2xl font-bold text-[#10B981]">{expectedYieldDisplay} <span className="text-sm text-slate-400">TRX</span></p>
                 </div>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-slate-400 mb-2">质押金额</label>
+                  <div className="flex gap-2">
+                    <input 
+                      type="number"
+                      placeholder="输入 TRX 金额"
+                      value={stakeAmount}
+                      onChange={(event) => setStakeAmount(event.target.value)}
+                      className="flex-1 px-4 py-2.5 bg-[#050505] border border-white/10 rounded-lg text-white placeholder:text-slate-500 focus:border-[#22D3EE] focus:ring-1 focus:ring-[#22D3EE] outline-none transition-all text-sm"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleStake}
+                        className="px-6 py-2.5 bg-gradient-to-r from-[#8B5CF6] to-[#22D3EE] text-[#050505] rounded-lg hover:shadow-lg hover:shadow-[#22D3EE]/30 transition-all duration-200 font-semibold text-sm whitespace-nowrap"
+                      >
+                        质押
+                      </button>
+                      <button
+                        onClick={handleUnstake}
+                        className="px-6 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg hover:bg-white/10 hover:border-white/20 transition-all duration-200 font-semibold text-sm whitespace-nowrap"
+                      >
+                        提现
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500">最小质押金额: 10 TRX</p>
               </div>
             </div>
             </div>

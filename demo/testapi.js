@@ -76,7 +76,7 @@ async function runTest() {
 // 运行
 // 并发调用 100 次 runTest
 async function runConcurrentTests() {
-    const tasks = Array.from({ length: 5 }, () => runTest());
+    const tasks = Array.from({ length: 3 }, () => runTest());
     await Promise.all(tasks);
     console.log('✅ 100 tests completed.');
 }
