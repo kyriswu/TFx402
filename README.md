@@ -6,6 +6,10 @@
 <strong style="font-size: 18px;">Gasless</strong> • <strong style="font-size: 18px;">Secure</strong> • <strong style="font-size: 18px;">Profitable</strong>
 </p>
 
+<p align="center">
+	<strong style="font-size: 20px;">相对 Tron 原生交易，手续费降低约 96.88%–98.54%</strong>
+</p>
+
 <p>
   基于 Tron 的 AI Agent 智能 facilitator，支持 x402 协议，主打低手续费转账、严格资金安全管控与可靠实时处理。
 </p>
@@ -40,14 +44,14 @@
 | 功能 | Tron 原生 | Coinbase x402 | TFx402 |
 | | Tron 原生 | Coinbase x402 | TFx402 |
 |------|-----------|--------------|--------|
-| 交易手续费 | 约 6.4 – 13.74 TRX（≈ 1.92 – 4.12 USD，按 TRX ≈ 0.3 USD 计算） | 0.001 美金/笔 | 低手续费 |
+| 交易手续费 | 约 6.4 – 13.74 TRX（≈ 1.92 – 4.12 USD，按 TRX ≈ 0.3 USD 计算） | 0.001 美金/笔 | 超低手续费 0.2trx每笔交易 |
 | USDT 转账 | 标准 | 不支持 | 支持 |
 | 处理速度 | 标准 | 快速 | 高频聚合实时处理 |
 | 资金安全 | 基础保障 | 标准风控 | 严格多策略风控 |
 | 协议支持 | - | x402 | x402 |
 | 闲置资金收益 | 无 | 无 | 3%-5% 年化质押增益 |
 | 交易验证 | 单笔验证 | 单笔验证 | 链上批量模拟验证 |
-| 链上交易参考 |  | 基础统计 | [transcan数据参考](https://nile.tronscan.org/#/transaction/512823e2172d50903999c5b9902866076084af2237bdafab227f200d1902c2d4) |
+| 链上交易参考 |  |  | [transcan数据参考](https://nile.tronscan.org/#/transaction/512823e2172d50903999c5b9902866076084af2237bdafab227f200d1902c2d4) |
 ## 快速开始
 
 ### 前端
