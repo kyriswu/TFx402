@@ -10,6 +10,16 @@
   基于 Tron 的 AI Agent 智能 facilitator，支持 x402 协议，主打低手续费转账、严格资金安全管控与可靠实时处理。
 </p>
 
+## 技术栈
+
+- 前端：Next.js 15，React 18，TypeScript，Tailwind CSS，PostCSS
+- Web3/链交互：TronWeb，ethers，viem，Particle Network AA/ConnectKit
+- 后端：Node.js，Express 5，WebSocket，JWT，dotenv，MCP SDK
+- 支付协议：@t402/core，@t402/tron，tron-x402
+- 数据层：MySQL（mysql2），Redis（ioredis）
+- 合约：Solidity 0.8.6，TronBox
+- Demo/Agent：XMTP SDK，axios
+
 ## 项目亮点
 
 - Tron 低手续费
